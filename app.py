@@ -17,13 +17,18 @@ db.create_all()
 
 @app.get("/")
 def homepage():
-    """rederict to register."""
+    """ Redirect to register.
+    
+    """
 
     return redirect("/register")
 
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    """Register user: produce form & handle form submission."""
+    """ Register user: produce form & handle form submission.
+    
+    """
 
     form = RegisterForm()
 
@@ -32,7 +37,7 @@ def register():
         pwd = form.password.data
         email = form.email.data
         first_name = form.first_name.data
-        last_name = form.first_name.data
+        last_name = form.last_name.data
 
         user = User.register(name, pwd, email, first_name, last_name)
         db.session.add(user)
@@ -40,15 +45,18 @@ def register():
 
         session["username"] = user.username
 
-        # on successful login, redirect to secret page
-        return redirect("/secret")
+        # on successful login, redirect to users/<username> page
+        return redirect(f"/users/{user.username}")
 
     else:
         return render_template("register.html", form=form)
 
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    """Produce login form or handle login."""
+    """ Produce login form or handle login.
+    
+    """
 
     form = LoginForm()
 
@@ -60,16 +68,40 @@ def login():
         user = User.authenticate(name, pwd)
 
         if user:
-            session["username"] = user.username  # keep logged in
-            return redirect("/secret")
+            session["username"] = user.username 
+            return redirect(f"/users/{user.username}")
 
         else:
             form.username.errors = ["Bad name/password"]
 
     return render_template("login.html", form=form)
-# end-login
 
-@app.get('/secret')
-def show_secret():
 
-    return render_template("secret.html")
+
+@app.get('/users/<username>')
+def show_user_page(username):
+    """Shows user information.
+    
+    """
+    user = User.query.get_or_404(username)
+    form = CSRFProtectForm()
+
+    if not user.username == session.get("username"):
+        flash("You must be logged in to view!")
+        return redirect("/")
+    else:
+        return render_template("user.html", user=user, form=form)
+
+@app.post("/logout")
+def logout():
+    """Logs user out and redirects to homepage."""
+
+    form = CSRFProtectForm()
+
+    if form.validate_on_submit():
+        # Remove "user_id" if present, but no errors if it wasn't
+        flash("Log out successful")
+        session.pop("username", None)
+        
+
+    return redirect("/")
