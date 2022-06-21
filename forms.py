@@ -22,7 +22,7 @@ class LoginForm(FlaskForm):
 class CSRFProtectForm(FlaskForm):
     """Form just for CSRF Protection"""
 
-class NewNoteForm(FlaskForm):
+class NewOrEditNoteForm(FlaskForm):
     """Form for adding a new note"""
     title= StringField("Title", validators=[InputRequired()])
     content = TextAreaField("Content", validators=[InputRequired()])

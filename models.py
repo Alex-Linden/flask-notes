@@ -38,6 +38,8 @@ class User(db.Model):
         nullable=False
     )
 
+    notes = db.relationship("Note", backref="users")
+
 
     @classmethod
     def register(cls, username, pwd, email, first_name, last_name):

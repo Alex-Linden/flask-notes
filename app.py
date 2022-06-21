@@ -1,6 +1,6 @@
 from flask import Flask, render_template, redirect, session, flash
 from models import connect_db, db, User, Note
-from forms import RegisterForm, LoginForm, CSRFProtectForm, NewNoteForm
+from forms import RegisterForm, LoginForm, CSRFProtectForm, NewOrEditNoteForm
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql:///hashing_login"
@@ -31,7 +31,7 @@ def register_new_user():
 
     if form.validate_on_submit():
         new_user = User.register(
-            name=form.username.data, 
+            username=form.username.data, 
             pwd=form.password.data, 
             email=form.email.data, 
             first_name=form.first_name.data, 
@@ -86,9 +86,7 @@ def show_user_page(username):
     user = User.query.get_or_404(username)
     form = CSRFProtectForm()
 
-    notes = Note.query.filter(Note.owner == username).all()
-
-    return render_template("user.html", user=user, form=form, notes=notes)
+    return render_template("user.html", user=user, form=form, notes=user.notes)
 
 
 @app.post("/logout")
@@ -116,11 +114,10 @@ def delete_user_and_notes(username):
         return redirect("/")
 
     user = User.query.get_or_404(username)
-    notes = Note.query.filter(Note.owner == username).all()
 
     if form.validate_on_submit():
 
-        for note in notes:
+        for note in user.notes:
             db.session.delete(note)
 
         db.session.delete(user)
@@ -142,7 +139,7 @@ def add_new_note(username):
         flash("You must be logged in to view!")
         return redirect("/")
 
-    form = NewNoteForm()
+    form = NewOrEditNoteForm()
 
     if form.validate_on_submit():
         new_note = Note(
@@ -151,7 +148,9 @@ def add_new_note(username):
             owner=username
         )
 
-        db.session.add(new_note)
+        user = User.query.get_or_404(username)
+
+        user.notes.append(new_note)
         db.session.commit()
 
         flash(f"Note '{new_note.title}' added.")
@@ -171,7 +170,7 @@ def update_note(noteid):
         return redirect("/")
 
     
-    form = NewNoteForm(obj=note)
+    form = NewOrEditNoteForm(obj=note)
 
     if form.validate_on_submit():
         note.title = form.title.data
@@ -191,13 +190,13 @@ def delete_note(noteid):
     """ Remove note from user's note list """
     
     note = Note.query.get_or_404(noteid)
-    form = CSRFProtectForm()
-
-    username = note.owner
 
     if note.owner != session.get(CURR_USER):
         flash("You must be logged in to view!")
         return redirect("/")
+    
+    form = CSRFProtectForm()
+    username = note.owner
     
     if form.validate_on_submit():
         db.session.delete(note)
