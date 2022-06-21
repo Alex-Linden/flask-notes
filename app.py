@@ -1,5 +1,4 @@
 from flask import Flask, render_template, redirect, session, flash
-#from flask_debugtoolbar import DebugToolbarExtension
 from models import connect_db, db, User
 from forms import RegisterForm, LoginForm, CSRFProtectForm
 
@@ -12,22 +11,19 @@ app.config["SECRET_KEY"] = "abc123"
 connect_db(app)
 db.create_all()
 
-#toolbar = DebugToolbarExtension(app)
 
 
 @app.get("/")
-def homepage():
-    """ Redirect to register.
-    
-    """
+def redirect_to_register():
+    """ Redirect to register."""
 
     return redirect("/register")
 
 
 @app.route("/register", methods=["GET", "POST"])
-def register():
+def register_new_user():
     """ Register user: produce form & handle form submission.
-    
+
     """
 
     form = RegisterForm()
@@ -39,14 +35,14 @@ def register():
         first_name = form.first_name.data
         last_name = form.last_name.data
 
-        user = User.register(name, pwd, email, first_name, last_name)
-        db.session.add(user)
+        new_user = User.register(name, pwd, email, first_name, last_name)
+        db.session.add(new_user)
         db.session.commit()
 
-        session["username"] = user.username
+        session["username"] = new_user.username
 
         # on successful login, redirect to users/<username> page
-        return redirect(f"/users/{user.username}")
+        return redirect(f"/users/{new_user.username}")
 
     else:
         return render_template("register.html", form=form)
@@ -55,7 +51,7 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """ Produce login form or handle login.
-    
+
     """
 
     form = LoginForm()
@@ -68,7 +64,7 @@ def login():
         user = User.authenticate(name, pwd)
 
         if user:
-            session["username"] = user.username 
+            session["username"] = user.username
             return redirect(f"/users/{user.username}")
 
         else:
@@ -80,8 +76,8 @@ def login():
 
 @app.get('/users/<username>')
 def show_user_page(username):
-    """Shows user information.
-    
+    """authenticate if logged in and shows user information.
+    redirects to register page if not logged in
     """
     user = User.query.get_or_404(username)
     form = CSRFProtectForm()
@@ -94,14 +90,14 @@ def show_user_page(username):
 
 @app.post("/logout")
 def logout():
-    """Logs user out and redirects to homepage."""
+    """Logs user out and redirects to homepage/register page."""
 
     form = CSRFProtectForm()
 
     if form.validate_on_submit():
-        # Remove "user_id" if present, but no errors if it wasn't
+        # Remove "username" if present, but no errors if it wasn't
         flash("Log out successful")
         session.pop("username", None)
-        
+
 
     return redirect("/")

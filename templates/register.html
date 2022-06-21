@@ -4,26 +4,32 @@
 
 {% block content %}
 <h1 class="display-4">Register</h1>
-  <p class="lead">Register for our site.</p>
+<p class="lead">Register for our site.</p>
 
-  <form method="POST">
+<form method="POST">
 
-    {{ form.hidden_tag() }}
+  {{ form.hidden_tag() }}
 
-    {% for field in form
+  {% for field in form
   if field.widget.input_type != 'hidden' %}
-      <p>
-        {{ field.label }}
-        {{ field }}
+  <p>
+    {{ field.label }}
+    {{ field }}
 
-        {% for error in field.errors %}
-          {{ error }}
-        {% endfor %}
-      </p>
+    {% for error in field.errors %}
+    {{ error }}
     {% endfor %}
+  </p>
+  {% endfor %}
 
-    <button type="submit">Register</button>
+  <button type="submit">Register</button>
 
-  </form>
+</form>
+
+</form>
+
+<form action="/login">
+  <button type="submit">Login</button>
+</form>
 
 {% endblock %}
