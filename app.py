@@ -1,6 +1,6 @@
 from flask import Flask, render_template, redirect, session, flash
 from models import connect_db, db, User, Note
-from forms import RegisterForm, LoginForm, CSRFProtectForm
+from forms import RegisterForm, LoginForm, CSRFProtectForm, NewNoteForm
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql:///hashing_login"
@@ -13,30 +13,31 @@ db.create_all()
 
 CURR_USER = "username"
 
+################################################################################
+# User Routes
 
 @app.get("/")
 def redirect_to_register():
-    """ Redirect to register."""
+    """Redirect to register."""
 
     return redirect("/register")
 
 
 @app.route("/register", methods=["GET", "POST"])
 def register_new_user():
-    """ Register user: produce form & handle form submission.
-
-    """
+    """ Register user: produce form & handle form submission."""
 
     form = RegisterForm()
 
     if form.validate_on_submit():
-        name = form.username.data
-        pwd = form.password.data
-        email = form.email.data
-        first_name = form.first_name.data
-        last_name = form.last_name.data
+        new_user = User.register(
+            name=form.username.data, 
+            pwd=form.password.data, 
+            email=form.email.data, 
+            first_name=form.first_name.data, 
+            last_name=form.last_name.data
+        )
 
-        new_user = User.register(name, pwd, email, first_name, last_name)
         db.session.add(new_user)
         db.session.commit()
 
@@ -51,9 +52,7 @@ def register_new_user():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    """ Produce login form or handle login.
-
-    """
+    """ Produce login form or handle login."""
 
     form = LoginForm()
 
@@ -74,12 +73,12 @@ def login():
     return render_template("login.html", form=form)
 
 
-
 @app.get('/users/<username>')
 def show_user_page(username):
-    """authenticate if logged in and shows user information.
-    redirects to register page if not logged in
+    """ Authenticate if logged in and shows user information.
+        - Redirects user to register page if not logged in.
     """
+
     if username != session.get(CURR_USER):
         flash("You must be logged in to view!")
         return redirect("/")
@@ -90,6 +89,7 @@ def show_user_page(username):
     notes = Note.query.filter(Note.owner == username).all()
 
     return render_template("user.html", user=user, form=form, notes=notes)
+
 
 @app.post("/logout")
 def logout():
@@ -102,12 +102,14 @@ def logout():
         flash("Log out successful")
         session.pop(CURR_USER, None)
 
-
     return redirect("/")
+
 
 @app.post("/users/<username>/delete")
 def delete_user_and_notes(username):
-    """Deletes the user instance and their associated notes"""
+    """ Deletes the user instance and their associated notes. """
+
+    form = CSRFProtectForm()
 
     if username != session.get(CURR_USER):
         flash("You must be logged in to view!")
@@ -116,18 +118,29 @@ def delete_user_and_notes(username):
     user = User.query.get_or_404(username)
     notes = Note.query.filter(Note.owner == username).all()
 
-    for note in notes:
-        db.session.delete(note)
+    if form.validate_on_submit():
 
-    db.session.delete(user)
-    db.session.commit()
+        for note in notes:
+            db.session.delete(note)
+
+        db.session.delete(user)
+        db.session.commit()
+    
     flash(f"User {user.username} deleted.")
 
     return redirect("/")
 
+
+################################################################################
+# Notes Routes
+
 @app.route("/users/<username>/notes/add", methods=["GET", "POST"])
-def add_new_user_note(username):
-    """display new note form and handle submission"""
+def add_new_note(username):
+    """ Display new note form and handle submission """
+
+    if username != session.get(CURR_USER):
+        flash("You must be logged in to view!")
+        return redirect("/")
 
     form = NewNoteForm()
 
@@ -136,10 +149,61 @@ def add_new_user_note(username):
             title=form.title.data,
             content=form.content.data,
             owner=username
-            )
+        )
+
         db.session.add(new_note)
         db.session.commit()
+
         flash(f"Note '{new_note.title}' added.")
         return redirect(f'/users/{username}')
     else:
         return render_template("new_note.html", form=form)
+
+
+@app.route("/notes/<int:noteid>/update", methods=["GET", "POST"])
+def update_note(noteid):
+    """ Show note to update and handles update """
+
+    note = Note.query.get_or_404(noteid)
+
+    if note.owner != session.get(CURR_USER):
+        flash("You must be logged in to view!")
+        return redirect("/")
+
+    
+    form = NewNoteForm(obj=note)
+
+    if form.validate_on_submit():
+        note.title = form.title.data
+        note.content = form.content.data
+
+        db.session.commit()
+
+        flash(f"Note {note.title} updated!")
+        return redirect(f"/users/{note.owner}")  
+
+    else:
+        return render_template("note.html", form=form)
+
+
+@app.post("/notes/<int:noteid>/delete")
+def delete_note(noteid):
+    """ Remove note from user's note list """
+    
+    note = Note.query.get_or_404(noteid)
+    form = CSRFProtectForm()
+
+    username = note.owner
+
+    if note.owner != session.get(CURR_USER):
+        flash("You must be logged in to view!")
+        return redirect("/")
+    
+    if form.validate_on_submit():
+        db.session.delete(note)
+        db.session.commit()
+    
+    return redirect(f"/users/{username}")
+    
+
+

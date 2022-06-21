@@ -9,7 +9,7 @@ def connect_db(app):
     db.init_app(app)
 
 class User(db.Model):
-    """User Model"""
+    """User properties"""
 
     __tablename__ = "users"
 
@@ -71,7 +71,7 @@ class User(db.Model):
             return False
 
 class Note(db.Model):
-    """notes"""
+    """Note properties"""
 
     __tablename__ = "notes"
 

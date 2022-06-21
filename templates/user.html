@@ -3,21 +3,30 @@
 {% block title%}User{% endblock %}
 
 {% block content %}
-<h1>{{user.username}}</h1>
-<h1>{{user.email}}</h1>
-<h1>{{user.first_name}}</h1>
-<h1>{{user.last_name }}</h1>
+<h1>User name: {{user.username}}</h1>
+<h3>Email: {{user.email}}</h3>
+<h3>Name: {{user.first_name}} {{user.last_name }}</h3> 
+
 <ul>
   {% for note in notes%}
-  <li><a href="/notes/{{note.id}}">{{note.title}}</a>
-    <form action="/notes/{{note.id}}/delete" method="POST">
+  <li>
+    <a href="/notes/{{note.id}}/update">{{note.title}}</a>
+
+    <form action="/notes/{{note.id}}/delete" method="POST" style="display: inline">
     {{ form.hidden_tag() }}
-    <button type="submit">DELETE</button>
-  </form>
+        <button type="submit">DELETE</button>
+    </form>
   </li>
   {% endfor %}
 </ul>
-<form action="/logout" method="POST">
+
+<form action="/users/{{user.username}}/notes/add" style="display: inline">
+  
+    <button type="submit">Add a Note</button>
+  
+</form>
+
+<form action="/logout" method="POST" style="display: inline">
 
   {{ form.hidden_tag() }}
 
@@ -25,7 +34,7 @@
 
 </form>
 
-<form action="/users/{{user.username}}/delete" method="POST">
+<form action="/users/{{user.username}}/delete" method="POST" style="display: inline" >
 
   {{ form.hidden_tag() }}
 
