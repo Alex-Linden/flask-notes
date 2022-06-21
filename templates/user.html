@@ -7,13 +7,31 @@
 <h1>{{user.email}}</h1>
 <h1>{{user.first_name}}</h1>
 <h1>{{user.last_name }}</h1>
-
+<ul>
+  {% for note in notes%}
+  <li><a href="/notes/{{note.id}}">{{note.title}}</a>
+    <form action="/notes/{{note.id}}/delete" method="POST">
+    {{ form.hidden_tag() }}
+    <button type="submit">DELETE</button>
+  </form>
+  </li>
+  {% endfor %}
+</ul>
 <form action="/logout" method="POST">
 
-    {{ form.hidden_tag() }}
+  {{ form.hidden_tag() }}
 
-    <button type="submit">Log Out</button>
+  <button type="submit">Log Out</button>
 
-  </form>
+</form>
+
+<form action="/users/{{user.username}}/delete" method="POST">
+
+  {{ form.hidden_tag() }}
+
+  <button type="submit">Delete {{user.username}}</button>
+
+</form>
+
 
 {% endblock %}

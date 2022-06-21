@@ -1,5 +1,5 @@
 from flask import Flask, render_template, redirect, session, flash
-from models import connect_db, db, User
+from models import connect_db, db, User, Note
 from forms import RegisterForm, LoginForm, CSRFProtectForm
 
 app = Flask(__name__)
@@ -87,7 +87,9 @@ def show_user_page(username):
     user = User.query.get_or_404(username)
     form = CSRFProtectForm()
 
-    return render_template("user.html", user=user, form=form)
+    notes = Note.query.filter(Note.owner == username).all()
+
+    return render_template("user.html", user=user, form=form, notes=notes)
 
 @app.post("/logout")
 def logout():
@@ -102,3 +104,42 @@ def logout():
 
 
     return redirect("/")
+
+@app.post("/users/<username>/delete")
+def delete_user_and_notes(username):
+    """Deletes the user instance and their associated notes"""
+
+    if username != session.get(CURR_USER):
+        flash("You must be logged in to view!")
+        return redirect("/")
+
+    user = User.query.get_or_404(username)
+    notes = Note.query.filter(Note.owner == username).all()
+
+    for note in notes:
+        db.session.delete(note)
+
+    db.session.delete(user)
+    db.session.commit()
+    flash(f"User {user.username} deleted.")
+
+    return redirect("/")
+
+@app.route("/users/<username>/notes/add", methods=["GET", "POST"])
+def add_new_user_note(username):
+    """display new note form and handle submission"""
+
+    form = NewNoteForm()
+
+    if form.validate_on_submit():
+        new_note = Note(
+            title=form.title.data,
+            content=form.content.data,
+            owner=username
+            )
+        db.session.add(new_note)
+        db.session.commit()
+        flash(f"Note '{new_note.title}' added.")
+        return redirect(f'/users/{username}')
+    else:
+        return render_template("new_note.html", form=form)
