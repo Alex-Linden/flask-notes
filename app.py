@@ -11,6 +11,7 @@ app.config["SECRET_KEY"] = "abc123"
 connect_db(app)
 db.create_all()
 
+CURR_USER = "username"
 
 
 @app.get("/")
@@ -39,7 +40,7 @@ def register_new_user():
         db.session.add(new_user)
         db.session.commit()
 
-        session["username"] = new_user.username
+        session[CURR_USER] = new_user.username
 
         # on successful login, redirect to users/<username> page
         return redirect(f"/users/{new_user.username}")
@@ -64,7 +65,7 @@ def login():
         user = User.authenticate(name, pwd)
 
         if user:
-            session["username"] = user.username
+            session[CURR_USER] = user.username
             return redirect(f"/users/{user.username}")
 
         else:
@@ -79,14 +80,14 @@ def show_user_page(username):
     """authenticate if logged in and shows user information.
     redirects to register page if not logged in
     """
+    if username != session.get(CURR_USER):
+        flash("You must be logged in to view!")
+        return redirect("/")
+
     user = User.query.get_or_404(username)
     form = CSRFProtectForm()
 
-    if not user.username == session.get("username"):
-        flash("You must be logged in to view!")
-        return redirect("/")
-    else:
-        return render_template("user.html", user=user, form=form)
+    return render_template("user.html", user=user, form=form)
 
 @app.post("/logout")
 def logout():
@@ -97,7 +98,7 @@ def logout():
     if form.validate_on_submit():
         # Remove "username" if present, but no errors if it wasn't
         flash("Log out successful")
-        session.pop("username", None)
+        session.pop(CURR_USER, None)
 
 
     return redirect("/")
